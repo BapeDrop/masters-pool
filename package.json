@@ -1,0 +1,12 @@
+{
+  "name": "masters-pool",
+  "version": "1.0.0",
+  "description": "Live leaderboard for 2026 TGOSH/TD Masters Pool",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}

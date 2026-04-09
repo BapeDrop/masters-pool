@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2026 TGOSH/TD Masters Pool</title>
+  <style>
+    :root {
+      --green: #006747;
+      --green-dark: #004d35;
+      --green-light: #008c5f;
+      --yellow: #FEDB00;
+      --yellow-dim: #d4b800;
+      --bg: #f5f1e8;
+      --card: #ffffff;
+      --text: #1a1a1a;
+      --text-light: #666;
+      --border: #ddd;
+      --mc: #b8860b;
+      --wd: #cc3333;
+      --gold: #d4af37;
+      --silver: #a8a8a8;
+      --bronze: #cd7f32;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--green-dark), var(--green), var(--green-light));
+      color: white;
+      padding: 24px 20px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--yellow);
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+    }
+
+    header .subtitle {
+      font-size: 14px;
+      margin-top: 6px;
+      opacity: 0.9;
+      font-style: italic;
+    }
+
+    header .meta {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 12px;
+      font-size: 13px;
+      flex-wrap: wrap;
+    }
+
+    header .meta span {
+      background: rgba(255,255,255,0.15);
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    .payouts {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+
+    .payout-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    .payout-badge.gold { background: var(--gold); color: #1a1a1a; }
+    .payout-badge.silver { background: var(--silver); color: #1a1a1a; }
+    .payout-badge.bronze { background: var(--bronze); color: white; }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px 12px;
+    }
+
+    .update-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      font-size: 12px;
+      color: var(--text-light);
+    }
+
+    .update-bar .live-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      margin-right: 6px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .update-bar .pre-dot {
+      background: var(--yellow-dim);
+      animation: none;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    thead th {
+      background: var(--green);
+      color: white;
+      padding: 10px 8px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    thead th:nth-child(1) { width: 40px; }
+    thead th:nth-child(2) { text-align: left; padding-left: 12px; }
+    thead th:nth-child(3) { width: 70px; }
+
+    tbody tr {
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    tbody tr:hover { background: #f0ede4; }
+    tbody tr.expanded { background: #f7f5ee; }
+    tbody tr:not(:last-child) td { border-bottom: 1px solid var(--border); }
+
+    tbody td {
+      padding: 10px 8px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    tbody td:nth-child(2) {
+      text-align: left;
+      padding-left: 12px;
+      font-weight: 600;
+    }
+
+    .rank { font-weight: 700; color: var(--green); }
+    .rank-1 { color: var(--gold); font-size: 16px; }
+    .rank-2 { color: var(--silver); }
+    .rank-3 { color: var(--bronze); }
+
+    .score {
+      font-weight: 700;
+      font-size: 16px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .score.under { color: #c0392b; }
+    .score.over { color: var(--text); }
+    .score.even { color: var(--green); }
+
+    .ineligible td { opacity: 0.5; }
+    .ineligible td:nth-child(2)::after {
+      content: " (DQ/WD)";
+      color: var(--wd);
+      font-size: 11px;
+      font-weight: 400;
+    }
+
+    .player-detail {
+      display: none;
+    }
+
+    .player-detail.show {
+      display: table-row;
+    }
+
+    .player-detail td {
+      padding: 0;
+      background: #faf8f2;
+    }
+
+    .player-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px;
+      padding: 12px;
+    }
+
+    .player-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 13px;
+    }
+
+    .player-card .p-name {
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .player-card .p-score {
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+    }
+
+    .player-card .p-rounds {
+      color: var(--text-light);
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .player-card .p-status {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .p-status.mc { background: #fff3cd; color: var(--mc); }
+    .p-status.wd, .p-status.dq { background: #f8d7da; color: var(--wd); }
+    .p-status.active { background: #d4edda; color: var(--green); }
+    .p-status.pre { background: #e2e3e5; color: #666; }
+
+    .player-names {
+      font-size: 12px;
+      color: var(--text-light);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 300px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-light);
+      font-style: italic;
+      font-size: 16px;
+    }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 20px; }
+      .player-names { display: none; }
+      tbody td, thead th { padding: 8px 4px; font-size: 12px; }
+      .score { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>2026 TGOSH/TD Masters Pool</h1>
+    <div class="subtitle">Augusta National Golf Club</div>
+    <div class="payouts">
+      <span class="payout-badge gold">1st $144</span>
+      <span class="payout-badge silver">2nd $72</span>
+      <span class="payout-badge bronze">3rd $24</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="update-bar">
+      <div>
+        <span class="live-dot pre-dot" id="statusDot"></span>
+        <span id="statusText">Loading...</span>
+      </div>
+      <div id="lastUpdated"></div>
+    </div>
+
+    <div id="leaderboard" class="loading">Fetching scores...</div>
+  </div>
+
+  <script>
+    function formatScore(n) {
+      if (n === null || n === undefined) return "–";
+      if (n === 0) return "E";
+      return n > 0 ? "+" + n : String(n);
+    }
+
+    function scoreClass(n) {
+      if (n === null || n === undefined) return "";
+      if (n < 0) return "under";
+      if (n > 0) return "over";
+      return "even";
+    }
+
+    function renderRound(val) {
+      return val !== null && val !== undefined ? val : "–";
+    }
+
+    function thruText(p) {
+      if (p.status === "MC") return "MC";
+      if (p.status === "WD") return "WD";
+      if (p.status === "DQ") return "DQ";
+      if (p.status === "pre") return "–";
+      if (p.thru === 18 || p.thru === "F") return "F";
+      if (p.thru === 0 || p.thru === null) return "–";
+      return p.thru;
+    }
+
+    function renderLeaderboard(data) {
+      const container = document.getElementById("leaderboard");
+      const dot = document.getElementById("statusDot");
+      const statusText = document.getElementById("statusText");
+      const lastUpdated = document.getElementById("lastUpdated");
+
+      const allPre = data.entries.every(e => e.allPreTournament);
+
+      if (allPre) {
+        dot.className = "live-dot pre-dot";
+        statusText.textContent = "Tournament has not started – showing entries";
+      } else {
+        dot.className = "live-dot";
+        statusText.textContent = `Live – ${data.event || "Masters Tournament"}`;
+      }
+
+      const ts = new Date(data.lastUpdated);
+      lastUpdated.textContent = "Updated " + ts.toLocaleTimeString();
+
+      let html = `<table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Entrant</th>
+            <th>Score</th>
+            <th>Players</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+      data.entries.forEach((entry, idx) => {
+        const rankText = entry.rank ? (entry.rank <= 3 ? entry.rank : entry.rank) : "–";
+        const rankClass = entry.rank === 1 ? "rank-1" : entry.rank === 2 ? "rank-2" : entry.rank === 3 ? "rank-3" : "";
+        const rowClass = entry.hasWdDq ? "ineligible" : "";
+        const scoreText = entry.allPreTournament ? "–" : formatScore(entry.totalToPar);
+        const sc = entry.allPreTournament ? "" : scoreClass(entry.totalToPar);
+
+        const playerNames = entry.players.map(p => p.name).join(", ");
+
+        html += `<tr class="${rowClass}" onclick="toggleDetail(${idx})">
+          <td class="rank ${rankClass}">${rankText}</td>
+          <td>${entry.name}</td>
+          <td class="score ${sc}">${scoreText}</td>
+          <td class="player-names">${playerNames}</td>
+        </tr>
+        <tr class="player-detail" id="detail-${idx}">
+          <td colspan="4">
+            <div class="player-grid">`;
+
+        entry.players.forEach(p => {
+          const pScoreText = p.poolScore !== null ? formatScore(p.poolScore) : (p.toPar !== null ? formatScore(p.toPar) : "–");
+          const pScoreClass = p.poolScore !== null ? scoreClass(p.poolScore) : scoreClass(p.toPar);
+          let statusClass = p.status.toLowerCase();
+          let statusLabel = p.status === "active" ? thruText(p) : p.status.toUpperCase();
+          if (p.status === "active" && (p.thru === 18 || p.thru === "F") && p.round === 4) statusLabel = "F";
+          if (p.status === "active") statusLabel = "Thru " + thruText(p);
+          if (p.status === "pre") { statusClass = "pre"; statusLabel = "PRE"; }
+
+          html += `<div class="player-card">
+              <div class="p-name">
+                <span>${p.name}</span>
+                <span class="p-score ${pScoreClass}">${pScoreText}</span>
+              </div>
+              <div class="p-rounds">
+                R1: ${renderRound(p.R1)} &nbsp; R2: ${renderRound(p.R2)} &nbsp; R3: ${renderRound(p.R3)} &nbsp; R4: ${renderRound(p.R4)}
+              </div>
+              <div style="margin-top:4px"><span class="p-status ${statusClass}">${statusLabel}</span></div>
+            </div>`;
+        });
+
+        html += `</div></td></tr>`;
+      });
+
+      html += "</tbody></table>";
+      container.innerHTML = html;
+    }
+
+    function toggleDetail(idx) {
+      const row = document.getElementById("detail-" + idx);
+      row.classList.toggle("show");
+    }
+
+    async function fetchAndRender() {
+      try {
+        const res = await fetch("/api/leaderboard");
+        const data = await res.json();
+        renderLeaderboard(data);
+      } catch (err) {
+        console.error("Fetch error:", err);
+      }
+    }
+
+    // Initial load
+    fetchAndRender();
+
+    // Auto-refresh every 2 minutes
+    setInterval(fetchAndRender, 2 * 60 * 1000);
+  </script>
+</body>
+</html>
