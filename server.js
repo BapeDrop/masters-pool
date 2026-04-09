@@ -2,7 +2,7 @@ const express = require("express");
 const path = require("path");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const ESPN_URL =
   "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard";
