@@ -273,11 +273,22 @@
       font-size: 16px;
     }
 
+    .mobile-players {
+      display: none;
+      font-size: 11px;
+      color: var(--text-light);
+      font-weight: 400;
+      margin-top: 3px;
+    }
+
     @media (max-width: 600px) {
       header h1 { font-size: 20px; }
       .player-names { display: none; }
-      tbody td, thead th { padding: 8px 4px; font-size: 12px; }
-      .score { font-size: 14px; }
+      thead th:nth-child(4) { display: none; }
+      tbody td, thead th { padding: 8px 6px; font-size: 13px; }
+      .score { font-size: 15px; }
+      .mobile-players { display: block; }
+      .player-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
@@ -373,7 +384,7 @@
 
         html += `<tr class="${rowClass}" onclick="toggleDetail(${idx})">
           <td class="rank ${rankClass}">${rankText}</td>
-          <td>${entry.name}</td>
+          <td>${entry.name}<div class="mobile-players">${playerNames}</div></td>
           <td class="score ${sc}">${scoreText}</td>
           <td class="player-names">${playerNames}</td>
         </tr>
