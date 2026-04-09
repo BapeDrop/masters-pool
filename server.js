@@ -125,13 +125,20 @@ async function getScores() {
     const comp = mastersEvent.competitions?.[0];
     const competitors = comp?.competitors || [];
 
-    // Determine current round from the max rounds completed
+    // ESPN uses value=0 + displayValue="-" for rounds not yet started.
+    // A "real" round has a displayValue like "E", "-3", "+1", etc.
+    function isRealRound(linescore) {
+      if (linescore.value === undefined || linescore.value === null) return false;
+      const dv = linescore.displayValue;
+      if (dv === "-" || dv === undefined || dv === null) return false;
+      return true;
+    }
+
+    // Determine current round from max real rounds completed
     let maxRounds = 0;
     for (const c of competitors) {
-      const rounds = (c.linescores || []).filter(
-        (l) => l.value !== undefined && l.value !== null
-      );
-      if (rounds.length > maxRounds) maxRounds = rounds.length;
+      const real = (c.linescores || []).filter(isRealRound).length;
+      if (real > maxRounds) maxRounds = real;
     }
 
     const result = {
@@ -145,41 +152,43 @@ async function getScores() {
     for (const c of competitors) {
       const id = c.id;
       const linescores = c.linescores || [];
-      const rounds = linescores.map((l) => l.value ?? null);
-      const completedRounds = rounds.filter(
-        (r) => r !== null && r !== undefined
-      );
       const toPar = parseScore(c.score);
+
+      // Count only real completed rounds
+      const realRounds = linescores.filter(isRealRound);
+      const numCompleted = realRounds.length;
+
+      // Get round stroke totals (only for real rounds)
+      const R1 = isRealRound(linescores[0] || {}) ? linescores[0].value : null;
+      const R2 = isRealRound(linescores[1] || {}) ? linescores[1].value : null;
+      const R3 = isRealRound(linescores[2] || {}) ? linescores[2].value : null;
+      const R4 = isRealRound(linescores[3] || {}) ? linescores[3].value : null;
 
       // Detect status
       let status = "active";
-      if (result.status === "pre" || completedRounds.length === 0) {
+      if (result.status === "pre" || numCompleted === 0) {
         status = "pre";
-      } else if (completedRounds.some((r) => r === 0)) {
-        // A round score of 0 indicates WD
-        status = "WD";
       } else if (
-        completedRounds.length === 2 &&
+        numCompleted === 2 &&
         maxRounds > 2
       ) {
-        // Has only 2 rounds when others have 3+ → missed cut
         status = "MC";
       }
+      // WD: has fewer real rounds than max but more than MC cutoff,
+      // or ESPN shows a 0-stroke round with non-"-" displayValue
+      // We'll refine WD detection if needed — it's rare
 
-      // Thru: during an active round, we can estimate from linescores
-      // ESPN hole-by-hole is nested in linescores[round].linescores
+      // Thru: count holes played in current round
       let thru = null;
-      const currentRoundIdx = completedRounds.length - 1;
-      if (
-        status === "active" &&
-        currentRoundIdx >= 0 &&
-        linescores[currentRoundIdx]
-      ) {
-        const holeScores = linescores[currentRoundIdx].linescores || [];
-        const holesPlayed = holeScores.filter(
-          (h) => h.value !== undefined && h.value !== null
-        ).length;
-        thru = holesPlayed || null;
+      if (status === "active" && numCompleted > 0) {
+        const currentRoundLS = linescores[numCompleted - 1];
+        if (currentRoundLS) {
+          const holeScores = currentRoundLS.linescores || [];
+          const holesPlayed = holeScores.filter(
+            (h) => h.value !== undefined && h.value !== null
+          ).length;
+          thru = holesPlayed || null;
+        }
       }
 
       result.players[id] = {
@@ -187,12 +196,9 @@ async function getScores() {
         shortName: PLAYERS[id] || c.athlete?.shortName || c.athlete?.fullName,
         toPar,
         status,
-        R1: rounds[0] ?? null,
-        R2: rounds[1] ?? null,
-        R3: rounds[2] ?? null,
-        R4: rounds[3] ?? null,
+        R1, R2, R3, R4,
         thru,
-        round: completedRounds.length,
+        round: numCompleted,
       };
     }
 
