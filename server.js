@@ -154,7 +154,13 @@ async function getScores() {
     for (const c of competitors) {
       const id = c.id;
       const linescores = c.linescores || [];
-      const toPar = parseScore(c.score);
+
+      // ESPN's c.score.displayValue is stale for in-progress rounds — it
+      // doesn't include the current round's partial to-par. Sum each real
+      // round's displayValue ourselves so the live total stays accurate.
+      const toPar = linescores
+        .filter(isRealRound)
+        .reduce((acc, ls) => acc + parseScore(ls.displayValue), 0);
 
       const R1 = isRealRound(linescores[0]) ? linescores[0].value : null;
       const R2 = isRealRound(linescores[1]) ? linescores[1].value : null;
