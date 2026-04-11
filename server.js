@@ -5,7 +5,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const ESPN_URL =
-  "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard";
+  "https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?league=pga";
 
 // ---------------------------------------------------------------------------
 // Pool entries – each player is keyed by ESPN athlete id
@@ -89,9 +89,16 @@ const ENTRIES = [
 let scoreCache = { data: null, ts: 0 };
 const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
 
-function parseScore(scoreStr) {
-  if (!scoreStr || scoreStr === "E") return 0;
-  return parseInt(scoreStr, 10);
+function parseScore(score) {
+  // ESPN returns score as either a string ("-3", "E") on /scoreboard
+  // or an object {value: <total strokes>, displayValue: "-12"} on /leaderboard.
+  // We always want the to-par, which is the displayValue.
+  if (score && typeof score === "object") {
+    return parseScore(score.displayValue);
+  }
+  if (!score || score === "E" || score === "-") return 0;
+  const n = parseInt(score, 10);
+  return Number.isNaN(n) ? 0 : n;
 }
 
 async function getScores() {
@@ -124,28 +131,23 @@ async function getScores() {
     const eventStatus = mastersEvent.status?.type || {};
     const comp = mastersEvent.competitions?.[0];
     const competitors = comp?.competitors || [];
+    const compPeriod = comp?.status?.period || 0;
 
-    // ESPN uses value=0 + displayValue="-" for rounds not yet started.
-    // A "real" round has a displayValue like "E", "-3", "+1", etc.
+    // A round linescore is "real" only if ESPN has populated a meaningful
+    // displayValue ("E", "-3", "+1", …). Rounds not yet started come back
+    // with value=0 and displayValue="-".
     function isRealRound(linescore) {
-      if (linescore.value === undefined || linescore.value === null) return false;
+      if (!linescore) return false;
       const dv = linescore.displayValue;
       if (dv === "-" || dv === undefined || dv === null) return false;
       return true;
-    }
-
-    // Determine current round from max real rounds completed
-    let maxRounds = 0;
-    for (const c of competitors) {
-      const real = (c.linescores || []).filter(isRealRound).length;
-      if (real > maxRounds) maxRounds = real;
     }
 
     const result = {
       event: mastersEvent.name || "Masters Tournament",
       status: eventStatus.state || "pre", // "pre", "in", "post"
       statusDesc: eventStatus.description || "",
-      currentRound: maxRounds || 0,
+      currentRound: compPeriod,
       players: {},
     };
 
@@ -154,41 +156,31 @@ async function getScores() {
       const linescores = c.linescores || [];
       const toPar = parseScore(c.score);
 
-      // Count only real completed rounds
-      const realRounds = linescores.filter(isRealRound);
-      const numCompleted = realRounds.length;
+      const R1 = isRealRound(linescores[0]) ? linescores[0].value : null;
+      const R2 = isRealRound(linescores[1]) ? linescores[1].value : null;
+      const R3 = isRealRound(linescores[2]) ? linescores[2].value : null;
+      const R4 = isRealRound(linescores[3]) ? linescores[3].value : null;
 
-      // Get round stroke totals (only for real rounds)
-      const R1 = isRealRound(linescores[0] || {}) ? linescores[0].value : null;
-      const R2 = isRealRound(linescores[1] || {}) ? linescores[1].value : null;
-      const R3 = isRealRound(linescores[2] || {}) ? linescores[2].value : null;
-      const R4 = isRealRound(linescores[3] || {}) ? linescores[3].value : null;
+      // Trust ESPN's per-player status — the leaderboard endpoint exposes
+      // STATUS_CUT / STATUS_WITHDRAWN / STATUS_DISQUALIFIED directly.
+      const espnStatusName = c.status?.type?.name || "";
+      const numCompleted = linescores.filter(isRealRound).length;
 
-      // Detect status
       let status = "active";
-      if (result.status === "pre" || numCompleted === 0) {
-        status = "pre";
-      } else if (
-        numCompleted === 2 &&
-        maxRounds > 2
-      ) {
+      if (espnStatusName === "STATUS_CUT") {
         status = "MC";
+      } else if (espnStatusName === "STATUS_WITHDRAWN") {
+        status = "WD";
+      } else if (espnStatusName === "STATUS_DISQUALIFIED") {
+        status = "DQ";
+      } else if (result.status === "pre" || numCompleted === 0) {
+        status = "pre";
       }
-      // WD: has fewer real rounds than max but more than MC cutoff,
-      // or ESPN shows a 0-stroke round with non-"-" displayValue
-      // We'll refine WD detection if needed — it's rare
 
-      // Thru: count holes played in current round
+      // Thru: ESPN provides this directly on the leaderboard endpoint
       let thru = null;
-      if (status === "active" && numCompleted > 0) {
-        const currentRoundLS = linescores[numCompleted - 1];
-        if (currentRoundLS) {
-          const holeScores = currentRoundLS.linescores || [];
-          const holesPlayed = holeScores.filter(
-            (h) => h.value !== undefined && h.value !== null
-          ).length;
-          thru = holesPlayed || null;
-        }
+      if (status === "active") {
+        thru = c.status?.thru ?? null;
       }
 
       result.players[id] = {
